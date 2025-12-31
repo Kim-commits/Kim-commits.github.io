@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CTF 4-Stage Challenge - COMPLETE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg-main: #050814;
+      --bg-card: rgba(10, 16, 32, 0.95);
+      --accent: #00ff9d;
+      --accent-soft: rgba(0, 255, 157, 0.3);
+      --accent-warn: #ff4d4d;
+      --accent-morse: #ff6b35;
+      --text-main: #f5f5f5;
+      --text-muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh; display: grid; place-items: center;
+      font-family: system-ui, sans-serif;
+      background: radial-gradient(circle at top, #111827 0%, #020617 40%, #000 100%);
+      color: var(--text-main);
+    }
+    .noise-layer {
+      position: fixed; inset: 0; opacity: 0.08;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+      z-index: -1;
+    }
+    .card {
+      background: var(--bg-card); border-radius: 14px; width: 380px; max-width: 94vw;
+      padding: 2rem; box-shadow: 0 0 0 1px rgba(148,163,184,0.2), 0 25px 60px -10px rgba(0,0,0,0.8);
+      position: relative;
+    }
+    h1 { font-size: 1.15rem; margin: 0 0 1rem 0; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-family: "Courier New", monospace; }
+    .subtitle { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; }
+    label { display: block; margin: 0.8rem 0 0.3rem; font-size: 0.85rem; color: var(--text-muted); }
+    input[type="text"], input[type="password"], input[type="range"] {
+      width: 100%; border-radius: 8px; border: 1px solid rgba(148,163,184,0.6); background: rgba(15,23,42,0.9);
+      color: var(--text-main); padding: 0.6rem; font-size: 0.9rem; outline: none;
+    }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+    input::placeholder { color: #6b7280; }
+    .btn { width: 100%; padding: 0.6rem; margin-top: 0.8rem; border-radius: 8px; border: none; font-size: 0.9rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; }
+    .btn:hover { filter: brightness(1.1); }
+    .btn-secondary { background: linear-gradient(135deg, #1e40af, #1d4ed8); }
+    .btn-ghost { background: transparent; border: 1px solid var(--accent-soft); color: var(--text-main); }
+    .btn-small { width: auto; padding: 0.4rem 1rem; font-size: 0.8rem; }
+    .message, .flag { margin-top: 1rem; padding: 0.8rem; border-radius: 8px; font-size: 0.85rem; border-left: 4px solid var(--accent); background: rgba(15,23,42,0.8); }
+    .flag strong { color: var(--accent); }
+    .cipher-text, .binary-text, .morse-text { font-family: "Courier New", monospace; background: rgba(15,23,42,0.9); border-radius: 8px; padding: 0.8rem; font-size: 0.9rem; border: 1px solid rgba(148,163,184,0.4); margin: 0.5rem 0; }
+    .badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; border: 1px solid var(--accent-soft); color: var(--text-muted); }
+    .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+    .section-title { margin: 1.2rem 0 0.5rem 0; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+    .shift-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .progress-bar { height: 4px; background: rgba(148,163,184,0.3); border-radius: 2px; margin: 0.5rem 0; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-morse)); border-radius: 2px; transition: width 0.4s ease; }
+    .morse-player { display: flex; gap: 0.8rem; align-items: center; margin: 0.8rem 0; }
+    .morse-btn { width: 48px; height: 48px; border-radius: 50%; border: none; background: rgba(255,107,53,0.2); color: var(--accent-morse); font-size: 1.4rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+    .morse-btn.active { background: var(--accent-morse); color: white; transform: scale(1.1); box-shadow: 0 0 20px var(--accent-morse); }
+    .morse-output { font-family: "Courier New", monospace; color: var(--accent-morse); font-weight: bold; min-height: 1.5em; flex: 1; font-size: 1.1rem; }
+    .morse-status { font-size: 0.75rem; color: var(--accent-morse); margin-top: 0.5rem; font-family: "Courier New", monospace; }
+    .captcha-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(8px); }
+    .captcha-card { background: #1a1a1a; border-radius: 16px; padding: 2rem; width: 90vw; max-width: 400px; border: 2px solid var(--accent); box-shadow: 0 0 40px var(--accent-soft); text-align: center; }
+    .hacker-text { font-family: "Courier New", monospace; color: var(--accent); font-size: 1.2rem; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    .divider { border-top: 1px dashed rgba(148,163,184,0.4); margin: 1.5rem 0; }
+    .login-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="noise-layer"></div>
+
+  <!-- STAGE 1: LOGIN -->
+  <div class="card" id="login-card">
+    <div class="login-header-row">
+      <h1>Stage 1 // Access Gate</h1>
+      <div class="badge"><span class="badge-dot"></span> AUTH</div>
+    </div>
+    <p class="subtitle">Gain operator access to the system</p>
+    <form id="login-form">
+      <label for="username">Username</label>
+      <input type="text" id="username" placeholder="type username">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="type password">
+      <button class="btn" type="submit">Authenticate</button>
+    </form>
+    <div id="login-result" class="message" style="display:none;"></div>
+  </div>
+
+  <!-- STAGE 2: CAESAR -->
+  <div class="card" id="caesar-card" style="display:none;">
+    <div class="login-header-row">
+      <h1>Stage 2 // Caesar Lab</h1>
+      <div class="badge"><span class="badge-dot"></span> CRYPTO</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:33%"></div></div>
+    <p class="subtitle">Caesar cipher with three shifts!</p>
+
+    <p class="section-title">Ciphertext</p>
+    <div class="cipher-text" id="cipher-display">ZQC{PfjmibZxbpxoZlab}</div>
+    <!-- STAGE 2: CAESAR 
+    <p class="section-title">Shift Explorer</p>
+    <div class="shift-header">
+      <span>Shift amount</span>
+      <span id="shift-value" class="shift-value">Shift: 0</span>
+    </div>
+    <input type="range" id="shift-slider" min="0" max="25" value="0" step="1">
+    <div class="cipher-text" id="shift-preview"></div>-->
+
+    <label for="caesar-flag">Decoded Flag</label>
+    <input type="text" id="caesar-flag" placeholder="fill in your answer here">
+    <button class="btn btn-secondary" id="caesar-submit">Submit Flag</button>
+    <div id="caesar-result" class="flag" style="display:none;"></div>
+  </div>
+
+  <!-- STAGE 3: BINARY -->
+  <div class="card" id="binary-card" style="display:none;">
+    <div class="login-header-row">
+      <h1>Stage 3 // Binary Vault</h1>
+      <div class="badge"><span class="badge-dot"></span> BINARY</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:66%"></div></div>
+    <p class="subtitle">Convert binary to ASCII to extract flag</p>
+
+    <p class="section-title">Binary Stream</p>
+    <div class="binary-text">01000011 01010100 01000110 01111011 01010011 01110100 01100001 01100111 01100101 01010100 01101000 01110010 01100101 01100101 01000011 01101111 01101101 01110000 01101100 01100101 01110100 01100101 01111101</div>
+
+    <label for="binary-input">Binary input (space separated)</label>
+    <input type="text" id="binary-input" placeholder="01000011 01010100 01000110...">
+    <button class="btn btn-secondary" id="binary-decode">Decode Binary</button>
+    <div id="binary-result" class="flag" style="display:none;"></div>
+
+    <label for="binary-flag">Extracted Flag</label>
+    <input type="text" id="binary-flag" placeholder="type in your answer">
+    <button class="btn" id="binary-submit">Submit Flag</button>
+    <div id="binary-final-result" class="flag" style="display:none;"></div>
+  </div>
+
+  <!-- STAGE 4: MORSE -->
+  <div class="card" id="morse-card" style="display:none;">
+    <div class="login-header-row">
+      <h1>Stage 4 // Morse Beacon</h1>
+      <div class="badge" style="--accent-morse:#ff6b35;border-color:var(--accent-morse);color:var(--accent-morse);"><span class="badge-dot" style="background:var(--accent-morse);"></span> MORSE</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+    <p class="subtitle">Tap rhythmically. Wait 1s between letters. Target: "VALUEFLAG-LAST-TWO-COMPLETED"</p>
+
+    <p class="section-title">Beacon Signal</p>
+    <div class="morse-text">.-.. .- ... - ..-. .-.. .- --.</div>
+
+    <p class="section-title">Morse Decoder</p>
+    <div class="morse-player">
+      <button class="morse-btn" id="morse-dot" title="Dot (short)">.</button>
+      <button class="morse-btn" id="morse-dash" title="Dash (long)">−</button>
+      <div class="morse-output" id="morse-output"></div>
+      <button class="btn btn-ghost btn-small" id="morse-clear">Clear</button>
+    </div>
+    <div class="morse-status" id="morse-status"></div>
+
+    <div id="morse-result" class="flag" style="display:none;"></div>
+    <button class="btn" id="complete-btn" style="display:none;">🏆 COMPLETE CTF</button>
+  </div>
+
+  <!-- CAPTCHA -->
+  <div id="captcha-overlay" class="captcha-overlay">
+    <div class="captcha-card">
+      <div class="hacker-text">HUMAN VERIFICATION</div>
+      <p id="captcha-text"></p>
+      <div style="display:flex;gap:1rem;margin:1.5rem 0;">
+        <input type="text" id="captcha-input" style="flex:1;">
+        <button class="btn btn-captcha" id="captcha-submit">Verify</button>
+      </div>
+      <div id="captcha-result"></div>
+    </div>
+  </div>
+
+  <script>
+    // GLOBAL STATE
+    const STATE_KEY = 'ctf_complete_v1';
+    let state = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+    let captchaActive = false;
+
+    // CONSTANTS
+    const FLAGS = {
+      login: 'CTF{simple_login_ctf_demo}',
+      caesar: 'CTF{SimpleCaesarCode}',
+      binary: 'CTF{StageThreeComplete}',
+      morse: 'CTF{morse_complete_1337}'
+    };
+    const CAESAR_CIPHER = 'FWI{VlpsohFdhvduFrgh}';
+    const captchaPhrases = ['I AM HUMAN', 'CTF PLAYER', 'NOT A BOT', 'MANUAL INPUT'];
+
+    const morseCode = {
+      '.-':'A','-...':'B','-.-.':'C','-..':'D','.':'E','..-.':'F','--.':'G','....':'H','..':'I','.---':'J',
+      '-.-':'K','.-..':'L','--':'M','-.':'N','---':'O','.--.':'P','--.-':'Q','.-.':'R','...':'S','-':'T',
+      '..-':'U','...-':'V','.--':'W','-..-':'X','-.--':'Y','--..':'Z','-----':'0','.----':'1','..---':'2',
+      '...--':'3','....-':'4','.....':'5','-....':'6','--...':'7','---..':'8','----.':'9'
+    };
+
+    // STATE MANAGEMENT
+    function saveState() { localStorage.setItem(STATE_KEY, JSON.stringify(state)); }
+    function initState() {
+      state = {
+        stage: state.stage || 1,
+        caesar: state.caesar || {solved: false},
+        binary: state.binary || {solved: false},
+        morse: state.morse || {solved: false}
+      };
+    }
+
+    // CAESAR FUNCTIONS
+   /*  function caesarShift(text, shift) {
+      return text.split('').map(c => {
+        const code = c.charCodeAt(0);
+        if (code >= 65 && code <= 90) return String.fromCharCode(((code-65-shift+26)%26)+65);
+        if (code >= 97 && code <= 122) return String.fromCharCode(((code-97-shift+26)%26)+97);
+        return c;
+      }).join('');
+    } */
+
+    // MORSE STATE
+    let morseBuffer = '', decodedText = '', lastTap = 0, timeoutId = null;
+
+    function addMorse(symbol) {
+      const now = Date.now();
+      
+      // Reset buffer if long pause
+      if (now - lastTap > 1500) {
+        if (morseBuffer) commitMorseLetter();
+        decodedText += ' ';
+        morseBuffer = symbol;
+      } else {
+        morseBuffer += symbol;
+      }
+      
+      lastTap = now;
+      
+      // Visual feedback
+      const btn = symbol === '.' ? document.getElementById('morse-dot') : document.getElementById('morse-dash');
+      btn.classList.add('active');
+      setTimeout(() => btn.classList.remove('active'), 200);
+      
+      document.getElementById('morse-output').textContent = decodedText + morseBuffer;
+      document.getElementById('morse-status').textContent = `⏳ Current: ${morseBuffer}`;
+      
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(commitMorseLetter, 1200);
+    }
+
+    function commitMorseLetter() {
+      if (morseBuffer) {
+        const letter = morseCode[morseBuffer] || '-';
+        decodedText += letter;
+        morseBuffer = '';
+        
+        document.getElementById('morse-output').textContent = decodedText;
+        document.getElementById('morse-status').textContent = `✓ ${decodedText.length} letters | Wait 1s between letters`;
+        
+        if (decodedText.includes('L A S T F L A G')) {
+          state.morse.solved = true;
+          document.getElementById('morse-result').innerHTML = `<strong>🎉 ${FLAGS.morse}</strong>`;
+          document.getElementById('morse-result').style.display = 'block';
+          document.getElementById('complete-btn').style.display = 'block';
+          saveState();
+        }
+      }
+    }
+
+    // EVENT LISTENERS
+    document.addEventListener('DOMContentLoaded', () => {
+      initState(); saveState();
+      
+      // Load progress
+      if (state.stage >= 2) document.getElementById('login-card').style.display = 'none';
+      if (state.stage >= 2) document.getElementById('caesar-card').style.display = state.stage >= 3 ? 'none' : 'block';
+      if (state.stage >= 3) document.getElementById('binary-card').style.display = state.stage >= 4 ? 'none' : 'block';
+      if (state.stage >= 4) document.getElementById('morse-card').style.display = 'block';
+
+      // STAGE 1: LOGIN
+      document.getElementById('login-form').onsubmit = e => {
+        e.preventDefault();
+        if (document.getElementById('username').value === 'admin' && document.getElementById('password').value === 'letmein') {
+          document.getElementById('login-result').innerHTML = `<strong>✅ Flag 1: ${FLAGS.login}</strong>`;
+          document.getElementById('login-result').style.display = 'block';
+          state.stage = 2; saveState();
+          setTimeout(() => {
+            document.getElementById('login-card').style.display = 'none';
+            document.getElementById('caesar-card').style.display = 'block';
+          }, 1500);
+        } else {
+          document.getElementById('login-result').textContent = '❌ Invalid credentials';
+          document.getElementById('login-result').style.display = 'block';
+        }
+      };
+
+      // STAGE 2: CAESAR
+      // document.getElementById('shift-slider').oninput = e => {
+      //   const shift = +e.target.value;
+      //   document.getElementById('shift-value').textContent = `Shift: ${shift}`;
+      //   document.getElementById('shift-preview').textContent = caesarShift(CAESAR_CIPHER, shift);
+      // };
+      
+      document.getElementById('caesar-submit').onclick = () => {
+        const input = document.getElementById('caesar-flag').value.trim();
+        if (input === FLAGS.caesar) {
+          state.caesar.solved = true; state.stage = 3; saveState();
+          document.getElementById('caesar-result').innerHTML = `<strong>🎉 Flag 2: CTF{second_stage_complete}</strong>`;
+          document.getElementById('caesar-result').style.display = 'block';
+          setTimeout(() => {
+            document.getElementById('caesar-card').style.display = 'none';
+            document.getElementById('binary-card').style.display = 'block';
+          }, 2000);
+        } else {
+          document.getElementById('caesar-result').textContent = '❌ Wrong flag';
+          document.getElementById('caesar-result').style.display = 'block';
+        }
+      };
+
+      // STAGE 3: BINARY
+      document.getElementById('binary-decode').onclick = () => {
+        const input = document.getElementById('binary-input').value.trim();
+        const bytes = input.split(/\s+/).map(b => String.fromCharCode(parseInt(b, 2)));
+        document.getElementById('binary-result').innerHTML = `<strong>${bytes.join('')}</strong>`;
+        document.getElementById('binary-result').style.display = 'block';
+      };
+      
+      document.getElementById('binary-submit').onclick = () => {
+        const input = document.getElementById('binary-flag').value.trim();
+        if (input === FLAGS.binary) {
+          state.binary.solved = true; state.stage = 4; saveState();
+          document.getElementById('binary-final-result').innerHTML = '<strong>✅ Flag 3 correct!</strong>';
+          document.getElementById('binary-final-result').style.display = 'block';
+          setTimeout(() => {
+            document.getElementById('binary-card').style.display = 'none';
+            document.getElementById('morse-card').style.display = 'block';
+          }, 1500);
+        } else {
+          document.getElementById('binary-final-result').textContent = '❌ Wrong flag';
+          document.getElementById('binary-final-result').style.display = 'block';
+        }
+      };
+
+      // STAGE 4: MORSE
+      document.getElementById('morse-dot').onclick = () => addMorse('.');
+      document.getElementById('morse-dash').onclick = () => addMorse('-');
+      document.getElementById('morse-clear').onclick = () => {
+        morseBuffer = ''; decodedText = ''; clearTimeout(timeoutId);
+        document.getElementById('morse-output').textContent = '';
+        document.getElementById('morse-status').textContent = 'Ready';
+      };
+      
+      document.getElementById('complete-btn').onclick = () => {
+        alert(`🏆 You d2id it!!! Yo5u are truly a gr6at h4cker!!!`);
+      };
+
+      // CAPTCHA (triggered by wrong attempts)
+      document.getElementById('captcha-submit').onclick = () => {
+        const expected = document.getElementById('captcha-overlay').dataset.phrase?.toUpperCase();
+        const input = document.getElementById('captcha-input').value.trim().toUpperCase();
+        if (input === expected) {
+          document.getElementById('captcha-result').innerHTML = '✅ Verified! Access restored.';
+          setTimeout(() => document.getElementById('captcha-overlay').style.display = 'none', 1000);
+          captchaActive = false;
+        } else {
+          document.getElementById('captcha-result').textContent = '❌ Wrong phrase';
+          document.getElementById('captcha-input').value = '';
+        }
+      };
+    });
+  </script>
+</body>
+</html>
